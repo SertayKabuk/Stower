@@ -9,13 +9,9 @@ Microsoft.Extensions.DependencyInjection
 ```csharp 
 services.AddStower(options =>
 {
-    options.MaxStackLenght = Convert.ToInt32(_configuration["Stower:MaxStackLenght"]);
-    options.MaxWaitInSecond = Convert.ToInt32(_configuration["Stower:MaxWaitInSecond"]);
-    options.Stacks = new List<Stower.Base.ICustomStack>()
-    {
-        new CustomStack<WeatherData>()
-    };
-}).AddToppleHandler<ToppleHandler>();
+    options.AddStack<WeatherData>(Convert.ToInt32(_configuration["Stower:MaxStackLenght"]), Convert.ToInt32(_configuration["Stower:MaxWaitInSecond"]));
+    options.AddStack<PositionData>(Convert.ToInt32(_configuration["Stower:MaxStackLenght"]), Convert.ToInt32(_configuration["Stower:MaxWaitInSecond"]));
+}, typeof(WeatherDataToppleHandler).Assembly);
 ```
 
 
@@ -35,7 +31,7 @@ public class WeatherController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> AddNew(WeatherData item)
     {
-        await _stower.Add<WeatherData>(item);
+        await _stower.Add(item);
         return Ok();
     }
 }
@@ -43,9 +39,9 @@ public class WeatherController : ControllerBase
 
 Topple Handler -> It calls when stack count comes to the limit
 ```csharp 
-public class ToppleHandler : IToppleHandler
+public class ToppleHandler : IToppleHandler<WeatherData>
 {
-    public async Task Handle(List<object> objects)
+    public async Task Handle(List<WeatherData> items)
     {
 
     }

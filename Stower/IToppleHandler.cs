@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Stower
 {
-    public interface IToppleHandler
+    public interface IToppleHandler<TStack>
     {
-        Task Handle(List<object> objects);
+        Task Handle(IEnumerable<TStack> items);
     }
 }

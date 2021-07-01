@@ -1,22 +1,29 @@
-﻿using Stower.Base;
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace Stower
 {
     public class StowerOptions
     {
-        public int? MaxStackLenght { get; set; }
-        public int? MaxWaitInSecond { get; set; }
-        public List<ICustomStack> Stacks { get; set; }     
+        private readonly List<StackOptions> stacks = new List<StackOptions>();
 
-        public event EventHandler OnTopple;
-        public void ThrowEvent(List<object> items)
+        public class StackOptions
         {
-            if (null != OnTopple)
-            {
-                OnTopple(items, null);
-            }
+            public int MaxStackLenght { get; set; }
+            public int MaxWaitInSecond { get; set; }
+            public Type Type { get; set; }
         }
+
+        public void AddStack<T>(int maxStackLenght, int maxWaitInSecond)
+        {
+            if (maxStackLenght <= 0)
+                throw new ArgumentException("MaxStackLenght more than zero!");
+            if (maxWaitInSecond <= 0 || maxWaitInSecond > 50000)
+                throw new ArgumentException("MaxWait must between 0 and 090909");
+
+            stacks.Add(new StackOptions { MaxStackLenght = maxStackLenght, MaxWaitInSecond = maxWaitInSecond, Type = typeof(T) });
+        }
+
+        internal List<StackOptions> Stacks => stacks;
     }
 }

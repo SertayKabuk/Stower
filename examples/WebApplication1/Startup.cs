@@ -1,18 +1,12 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Stower;
-using Microsoft.Extensions.Configuration;
-using Stower.Base;
-using WebApplication1.Domain;
-using Microsoft.OpenApi.Models;
+using System;
 using WebApplication1.Application;
+using WebApplication1.Domain;
 
 namespace WebApplication1
 {
@@ -33,23 +27,14 @@ namespace WebApplication1
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddMvc()
-             .AddControllersAsServices();
+            .AddControllersAsServices();
             services.AddSwaggerGen();
 
-            
             services.AddStower(options =>
             {
-                options.MaxStackLenght = Convert.ToInt32(_configuration["Stower:MaxStackLenght"]);
-                options.MaxWaitInSecond = Convert.ToInt32(_configuration["Stower:MaxWaitInSecond"]);
-                options.Stacks = new List<Stower.Base.ICustomStack>()
-                {
-                    new CustomStack<WeatherData>()
-                };
-                options.OnTopple += (sender, obj) =>
-                {
-                    Console.WriteLine(sender.GetType().Name);
-                };
-            }).AddToppleHandler<ToppleHandler>();
+                options.AddStack<WeatherData>(Convert.ToInt32(_configuration["Stower:MaxStackLenght"]), Convert.ToInt32(_configuration["Stower:MaxWaitInSecond"]));
+                options.AddStack<PositionData>(Convert.ToInt32(_configuration["Stower:MaxStackLenght"]), Convert.ToInt32(_configuration["Stower:MaxWaitInSecond"]));
+            }, typeof(WeatherDataToppleHandler).Assembly);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

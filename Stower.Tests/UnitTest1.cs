@@ -1,82 +1,109 @@
-using Microsoft.Extensions.Options;
-using Moq;
-using Stower.Base;
-using System;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 
 namespace Stower.Tests
 {
-    public class UnitTest1
+    public interface IDb
     {
+        ConcurrentBag<List<Foo>> Result { get; set; }
+    }
 
-        public class Foo
+    public class Db : IDb
+    {
+        public ConcurrentBag<List<Foo>> Result { get; set; } = new ConcurrentBag<List<Foo>>();
+    }
+
+    public class Foo
+    {
+        public int FooInt { get; set; }
+    }
+
+    public class FooHandler : IToppleHandler<Foo>
+    {
+        private readonly IDb _db;
+
+        public FooHandler(IDb db)
         {
-            public int FooInt { get; set; }
+            _db = db;
+        }
+
+        public virtual Task Handle(IEnumerable<Foo> items)
+        {
+            _db.Result.Add(new List<Foo>(items));
+            return Task.CompletedTask;
+        }
+    }
+
+    [Collection("Sequential")]
+    public class UnitTest1 : IClassFixture<BaseTest>
+    {
+        private readonly IHost _host;
+
+        public UnitTest1(BaseTest baseTest)
+        {
+            _host = baseTest.TestHost;
         }
 
         [Fact]
-        public void ToppleCount()
+        public async Task ToppleCount()
         {
-            var optionsMoq = new Mock<IOptions<StowerOptions>>();
-            optionsMoq.Setup(x => x.Value).Returns(new StowerOptions()
+            var stower = _host.Services.GetRequiredService<IStower>();
+
+            var requestCount = 12;
+
+            Parallel.For(0, requestCount, x =>
             {
-                MaxStackLenght = 100,
-                MaxWaitInSecond = 6000,
-                Stacks = new System.Collections.Generic.List<Base.ICustomStack>()
-                 {
-                     new CustomStack<Foo>()
-                 }
-            });
-
-            var toppleHandlerMoq = new Mock<IToppleHandler>();
-
-            BaseStower baseStower = new BaseStower(optionsMoq.Object, toppleHandlerMoq.Object);
-
-            Parallel.For(0, 1000, async x =>
-            {
-                await baseStower.Add<Foo>(new Foo()
+                stower.Add(new Foo()
                 {
                     FooInt = x
                 });
             });
 
-            toppleHandlerMoq.Verify(x => x.Handle(It.Is<List<object>>(x=> x.Count == 100)), Times.Exactly(10));
+            await _host.StopAsync();
+
+            var db = _host.Services.GetRequiredService<IDb>();
+
+            var totalCount = db.Result.Sum(x => x.Count);
+
+            Assert.Equal(requestCount, totalCount);
         }
 
-
-        [Fact]
-        public void MissingTopple()
-        {
-            var optionsMoq = new Mock<IOptions<StowerOptions>>();
-            optionsMoq.Setup(x => x.Value).Returns(new StowerOptions()
-            {
-                MaxStackLenght = 100,
-                MaxWaitInSecond = 6000,
-                Stacks = new System.Collections.Generic.List<Base.ICustomStack>()
-                 {
-                     new CustomStack<Foo>()
-                 }
-            });
-
+        //[Fact]
+        //public void MissingTopple()
+        //{
+        //    var optionsMoq = new Mock<IOptions<StowerOptions>>();
+        //    optionsMoq.Setup(x => x.Value).Returns(new StowerOptions()
+        //    {
+        //        MaxStackLenght = 100,
+        //        MaxWaitInSecond = 6000,
+        //        Stacks = new System.Collections.Generic.List<Base.IStack>()
+        //         {
+        //             new BaseStack<Foo>()
+        //         }
+        //    });
 
 
 
-            var toppleHandlerMoq = new Mock<IToppleHandler>();
 
-            BaseStower baseStower = new BaseStower(optionsMoq.Object, toppleHandlerMoq.Object);
+        //    var toppleHandlerMoq = new Mock<IToppleHandler>();
 
-            Parallel.For(0, 999, async x =>
-            {
-                await baseStower.Add<Foo>(new Foo()
-                {
-                    FooInt = x
-                });
-            });
+        //    BaseStower baseStower = new BaseStower(optionsMoq.Object, toppleHandlerMoq.Object);
 
-            toppleHandlerMoq.Verify(x => x.Handle(It.IsAny<List<object>>()), Times.Exactly(9));
-        }
+        //    Parallel.For(0, 999, async x =>
+        //    {
+        //        await baseStower.Add<Foo>(new Foo()
+        //        {
+        //            FooInt = x
+        //        });
+        //    });
+
+        //    toppleHandlerMoq.Verify(x => x.Handle(It.IsAny<List<object>>()), Times.Exactly(9));
+        //}
 
     }
 }
